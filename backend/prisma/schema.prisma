@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
@@ -14,86 +13,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum StreamType {
+  Spotify
+  Youtube
+}
 
 model User {
-  id        String    @id @default(cuid())
-  googleId   String @unique
-  name      String
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  image String
-  WorkspaceUser WorkspaceUser[]
-
-  Workspace Workspace[]
-
-  SongRequest SongRequest[]
-}
-
-model WorkspaceUser{
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id])
-  role   UserRole
-  workspaceId String
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-
-  SongRequest SongRequest[]
-
-  Vote Vote[]
-}
-
-model Workspace {
-  id           String        @id @default(cuid())
+  id           String           @id @default(uuid())
+  email        String           @unique
+  goolgeId     String
   name         String
-  code         String        @unique // For joining via code
-  rules        Json?         // For max length, genres, etc.
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  hostId String
-  host  User  @relation(references: [id], fields: [hostId])
-  songs        SongRequest[]
-
-  WorkspaceUser WorkspaceUser[]
+  streams      Stream[]         @relation("user")
+  upvotes      Upvote[]
+  addedStreams Stream[]         @relation("addedBy")
+  hostedSpaces WorkspaceSpace[] @relation("hostedBy")
 }
 
-model SongRequest {
-  id          String       @id @default(cuid())
-  title       String
-  artist      String
-  status      RequestStatus @default(PENDING) // PENDING, APPROVED, REJECTED
-  workspaceId String
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
-  requestedById String
-  requestedBy WorkspaceUser         @relation(fields: [requestedById], references: [id])
-  queueOrder  Int?
-  votes       Vote[]
-  createdAt   DateTime     @default(now())
-
-  User User[]
+model WorkspaceSpace {
+  id            String         @id @default(uuid())
+  name          String
+  streams       Stream[]       @relation("spaceStreams")
+  hostId        String
+  host          User           @relation("hostedBy", fields: [hostId], references: [id])
+  isActive      Boolean        @default(true)
+  currentStream CurrentStream?
 }
 
-model Vote {
-  id         String      @id @default(cuid())
-  userId     String
-  user       WorkspaceUser        @relation(fields: [userId], references: [id])
-  songId     String
-  song       SongRequest @relation(fields: [songId], references: [id])
-  type       VoteType
-  createdAt  DateTime    @default(now())
+model Stream {
+  id            String          @id @default(uuid())
+  type          StreamType
+  url           String
+  extractedId   String
+  title         String          @default("")
+  smallImg      String          @default("")
+  bigImg        String          @default("")
+  active        Boolean         @default(true)
+  played        Boolean         @default(false)
+  playedTs      DateTime?
+  createAt      DateTime        @default(now())
+  upvotes       Upvote[]
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], name: "user")
+  currentStream CurrentStream?
+  addedBy       String
+  addedByUser   User            @relation("addedBy", fields: [addedBy], references: [id])
+  spaceId       String?
+  space         WorkspaceSpace? @relation("spaceStreams", fields: [spaceId], references: [id], onDelete: Cascade)
 }
 
-enum UserRole {
-  HOST
-  LISTENER
+model CurrentStream {
+  id       String          @id @default(uuid())
+  userId   String
+  streamId String?         @unique
+  stream   Stream?         @relation(fields: [streamId], references: [id])
+  spaceId  String?         @unique
+  space    WorkspaceSpace? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 }
 
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
+model Upvote {
+  id       String @id @default(uuid())
+  userId   String
+  streamId String
+  user     User   @relation(fields: [userId], references: [id])
+  stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
 
-enum VoteType {
-  UPVOTE
-  DOWNVOTE
+  @@unique([userId, streamId])
 }
