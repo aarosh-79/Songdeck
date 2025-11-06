@@ -7,7 +7,6 @@ const createToken = (id, email) => {
   return jwt.sign({ id, email }, process.env.TOKEN_SECRET, { expiresIn: "7d" });
 };
 
-// Sign up a new user
 export const signupuser = async (req, res, next) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
@@ -45,7 +44,6 @@ export const signupuser = async (req, res, next) => {
   }
 };
 
-// Log in an existing user
 export const loginuser = async (req, res, next) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -72,7 +70,6 @@ export const loginuser = async (req, res, next) => {
   }
 };
 
-// Get user by ID
 export const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -117,12 +114,10 @@ export const getUserById = async (req, res, next) => {
   }
 };
 
-// Update user profile
 export const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    // Validate the input
     const validation = z.object({
       name: z.string().min(1, "Name must be at least 1 character").max(255, "Name must be less than 255 characters").optional(),
       email: z.string().email("Email must be a valid email").optional(),
@@ -137,12 +132,11 @@ export const updateUser = async (req, res, next) => {
 
     const { name, email } = validation.data;
 
-    // Check if email already exists for another user
     if (email) {
       const existingUser = await prisma.user.findFirst({
         where: {
           email,
-          id: { not: id }, // Exclude the current user
+          id: { not: id }, 
         },
       });
 
@@ -168,12 +162,10 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
-// Delete user (deactivate)
 export const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Instead of deleting, deactivate the user by setting email to include a suffix
     const deactivationSuffix = `_${Date.now()}`;
     const user = await prisma.user.update({
       where: { id },
@@ -192,7 +184,6 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
-// Get all users
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
@@ -201,19 +192,19 @@ export const getAllUsers = async (req, res, next) => {
           where: {
             active: true,
           },
-          take: 5, // Only include last 5 streams
+          take: 5, 
         },
         addedStreams: {
           where: {
             active: true,
           },
-          take: 5, // Only include last 5 added streams
+          take: 5, 
         },
         hostedSpaces: {
           where: {
             isActive: true,
           },
-          take: 5, // Only include last 5 hosted spaces
+          take: 5, 
         },
       },
       orderBy: { name: "asc" },
@@ -227,7 +218,6 @@ export const getAllUsers = async (req, res, next) => {
   }
 };
 
-// Get user's hosted workspaces
 export const getUserHostedWorkspaces = async (req, res, next) => {
   try {
     const { userId } = req.params;
